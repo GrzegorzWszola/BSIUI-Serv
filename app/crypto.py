@@ -2,6 +2,7 @@ import base64
 import re
 
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from fastapi import HTTPException
@@ -81,8 +82,19 @@ def validate_bundle(
             status_code=400, detail="Nieprawidłowy podpis klucza"
         )
 
+    # The protocol sends raw r||s (64 bytes, Web Crypto's format), but
+    # `cryptography` verifies DER-encoded signatures only, so convert first.
+    if len(sig_bytes) != 64:
+        raise HTTPException(
+            status_code=400, detail="Nieprawidłowy podpis klucza"
+        )
+    der_sig = encode_dss_signature(
+        int.from_bytes(sig_bytes[:32], "big"),
+        int.from_bytes(sig_bytes[32:], "big"),
+    )
+
     try:
-        ik.verify(sig_bytes, spk_bytes, ec.ECDSA(SHA256()))
+        ik.verify(der_sig, spk_bytes, ec.ECDSA(SHA256()))
     except Exception:
         raise HTTPException(
             status_code=400, detail="Nieprawidłowy podpis klucza"

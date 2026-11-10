@@ -5,8 +5,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# The .env file lives in the same directory as this module (app/.env).
-load_dotenv(Path(__file__).resolve().parent / ".env")
+# The .env file can live in app/ or in the project root directory.
+_base_dir = Path(__file__).resolve().parent
+load_dotenv(_base_dir / ".env")
+load_dotenv(_base_dir.parent / ".env")
 
 
 def _required(name: str) -> str:
